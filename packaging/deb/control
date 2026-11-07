@@ -1,0 +1,13 @@
+Package: supercola
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: @ARCH@
+Maintainer: Super Cola <noreply@supercola.invalid>
+Depends: @DEPENDS@, librsvg2-common, fonts-noto-color-emoji
+Recommends: fonts-noto-cjk
+Installed-Size: @SIZE@
+Description: Clipboard history panel in the style of Win+V
+ Opens with Super+V on Pop!_OS COSMIC: clipboard history with pinned items,
+ emoji, kaomoji, symbols and GIF tabs, and automatic paste into the app
+ you came from.

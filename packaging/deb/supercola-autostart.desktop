@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Super Cola
+Comment=Clipboard history daemon
+Exec=supercola
+Icon=supercola
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

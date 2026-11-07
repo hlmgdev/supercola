@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Super Cola
+Name[pt_BR]=Super Cola
+Comment=Clipboard history in the style of Win+V
+Comment[pt_BR]=Histórico da área de transferência no estilo do Win+V
+Exec=supercola-toggle settings
+Icon=supercola
+Categories=Utility;
+Keywords=clipboard;history;emoji;área de transferência;
+Terminal=false
+StartupNotify=false
