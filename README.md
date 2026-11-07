@@ -67,6 +67,8 @@ Cada versão traz um `SHA256SUMS` assinado com a chave do repositório. A impres
 8EC40968C091F69686334ECFF36E6858EC0E92C2
 ```
 
+A mesma impressão digital aparece ao buscar `hlmgdev@outlook.com` no [keys.openpgp.org](https://keys.openpgp.org/search?q=hlmgdev%40outlook.com). O servidor só liga uma chave a um e-mail depois que o dono do e-mail confirma, então essa busca é uma segunda fonte, fora do GitHub.
+
 Na pasta do download, sem importar nada para o seu GnuPG:
 
 ```sh
@@ -252,7 +254,7 @@ A automação não consegue clicar no COSMIC. Antes de uma versão, confira à m
 4. Faça commit e push no `supercola-apt` e espere o GitHub Pages publicar.
 5. Crie a Release com o `.deb`, o `SHA256SUMS` e o `SHA256SUMS.asc` de `dist/`.
 
-A chave privada fica só com o mantenedor e vence em 6 de novembro de 2031. Antes disso, estenda a validade com `gpg --quick-set-expire`, exporte a chave pública para `packaging/apt/supercola-archive-keyring.asc` e publique uma versão nova, que leva a chave atualizada aos usuários.
+A chave privada fica só com o mantenedor e vence em 6 de novembro de 2031. Antes disso, estenda a validade com `gpg --quick-set-expire`, exporte a chave pública para `packaging/apt/supercola-archive-keyring.asc`, envie esse arquivo de novo em [keys.openpgp.org/upload](https://keys.openpgp.org/upload) e publique uma versão nova, que leva a chave atualizada aos usuários.
 
 As medidas do painel e as diferenças em relação ao Windows estão em [docs/visual-spec.md](docs/visual-spec.md).
 
