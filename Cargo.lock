@@ -1213,6 +1213,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "supercola-toggle"
+version = "1.0.0"
+
+[[package]]
 name = "supercola-wayland"
 version = "1.0.0"
 dependencies = [
