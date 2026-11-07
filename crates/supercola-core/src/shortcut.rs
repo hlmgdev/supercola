@@ -122,9 +122,87 @@ pub fn merge(existente: Option<&str>, modifiers: &str, key: &str, command: &str)
     ))
 }
 
+/// Atalho de outro app que cedeu a tecla ao Super Cola, para `--restore-shortcuts`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Substituido {
+    pub componente: String,
+    pub acao: String,
+    pub nome_componente: String,
+    pub nome_acao: String,
+    /// Todas as teclas que a ação tinha antes da troca.
+    pub teclas: Vec<i32>,
+}
+
+impl Substituido {
+    pub fn para_linha(&self) -> String {
+        let teclas: Vec<String> = self.teclas.iter().map(i32::to_string).collect();
+        [
+            self.componente.as_str(),
+            &self.acao,
+            &self.nome_componente,
+            &self.nome_acao,
+            &teclas.join(","),
+        ]
+        .join("\t")
+    }
+
+    pub fn de_linha(linha: &str) -> Option<Self> {
+        let mut campos = linha.trim_end_matches('\n').split('\t');
+        let (componente, acao, nome_componente, nome_acao, teclas) = (
+            campos.next()?,
+            campos.next()?,
+            campos.next()?,
+            campos.next()?,
+            campos.next()?,
+        );
+        if campos.next().is_some() || componente.is_empty() || acao.is_empty() {
+            return None;
+        }
+        Some(Self {
+            componente: componente.to_string(),
+            acao: acao.to_string(),
+            nome_componente: nome_componente.to_string(),
+            nome_acao: nome_acao.to_string(),
+            teclas: teclas
+                .split(',')
+                .filter(|t| !t.is_empty())
+                .map(str::parse)
+                .collect::<Result<_, _>>()
+                .ok()?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn substituido_sobrevive_ao_arquivo() {
+        let s = Substituido {
+            componente: "plasmashell".into(),
+            acao: "show-on-mouse-pos".into(),
+            nome_componente: "plasmashell".into(),
+            nome_acao: "Show Clipboard Items at Mouse Position".into(),
+            teclas: vec![268435542, 134217756],
+        };
+        assert_eq!(Substituido::de_linha(&s.para_linha()), Some(s));
+    }
+
+    #[test]
+    fn substituido_sem_teclas_e_valido() {
+        let s = Substituido::de_linha("c\ta\tC\tA\t\n").unwrap();
+        assert!(s.teclas.is_empty());
+    }
+
+    #[test]
+    fn backup_estragado_nao_vira_atalho() {
+        assert_eq!(Substituido::de_linha(""), None);
+        assert_eq!(Substituido::de_linha("c\ta\tC"), None);
+        assert_eq!(Substituido::de_linha("\ta\tC\tA\t1"), None);
+        assert_eq!(Substituido::de_linha("c\ta\tC\tA\tabc"), None);
+        assert_eq!(Substituido::de_linha("c\ta\tC\tA\t1\textra"), None);
+    }
 
     const CMD: &str = "supercola-toggle";
 

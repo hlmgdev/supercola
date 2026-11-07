@@ -19,11 +19,17 @@ LIB=$(readlink -f /usr/local/lib/libgtk4-layer-shell.so.0)
 install -Dm644 "$LIB" "$RAIZ/usr/lib/supercola/libgtk4-layer-shell.so.0"
 strip --strip-unneeded "$RAIZ/usr/lib/supercola/libgtk4-layer-shell.so.0"
 
+install -Dm644 data/kwin/focus.js "$RAIZ/usr/share/supercola/kwin/focus.js"
+EXTENSOES="$RAIZ/usr/share/gnome-shell/extensions"
+install -d "$EXTENSOES"
+cp -r data/gnome-shell/. "$EXTENSOES/"
+find "$EXTENSOES" -type d -exec chmod 755 {} + -o -type f -exec chmod 644 {} +
 install -d "$RAIZ/usr/share/supercola/icons"
 install -m644 data/icons/*.svg "$RAIZ/usr/share/supercola/icons/"
 install -Dm644 data/fonts/selawk.ttf "$RAIZ/usr/share/fonts/truetype/supercola/selawk.ttf"
 install -m644 data/fonts/selawkl.ttf data/fonts/selawksb.ttf "$RAIZ/usr/share/fonts/truetype/supercola/"
 install -Dm644 packaging/deb/supercola.desktop "$RAIZ/usr/share/applications/dev.supercola.SuperCola.desktop"
+install -m644 packaging/deb/dev.supercola.*.desktop "$RAIZ/usr/share/applications/"
 install -Dm644 packaging/deb/supercola-autostart.desktop "$RAIZ/etc/xdg/autostart/supercola.desktop"
 install -Dm644 data/supercola.svg "$RAIZ/usr/share/icons/hicolor/scalable/apps/supercola.svg"
 

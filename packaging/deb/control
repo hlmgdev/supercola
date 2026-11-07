@@ -8,6 +8,6 @@ Depends: @DEPENDS@, librsvg2-common, fonts-noto-color-emoji
 Recommends: fonts-noto-cjk
 Installed-Size: @SIZE@
 Description: Clipboard history panel in the style of Win+V
- Opens with Super+V on Pop!_OS COSMIC: clipboard history with pinned items,
+ Opens with Super+V on COSMIC, GNOME and KDE Plasma: clipboard history with pinned items,
  emoji, kaomoji, symbols and GIF tabs, and automatic paste into the app
  you came from.

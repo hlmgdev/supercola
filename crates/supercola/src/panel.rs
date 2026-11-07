@@ -19,6 +19,7 @@ use gtk4::{
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use supercola_core::config::Position;
 use supercola_core::ipc::Tab;
+use supercola_wayland::probe::Ambiente;
 
 use crate::app::App;
 use crate::gif::GifTab;
@@ -26,6 +27,8 @@ use crate::grid::{Grid, Tipo};
 use crate::history::HistoryTab;
 use crate::home::HomeTab;
 
+/// A extensão do GNOME reconhece o painel por este título.
+const TITULO: &str = "Super Cola";
 const LARGURA: i32 = 360;
 const ALTURA: i32 = 400;
 const MARGEM: i32 = 12;
@@ -63,6 +66,8 @@ pub struct Ui {
     origem: Cell<(f64, f64)>,
     /// O clique fora já passa para o app de trás, e a perda de foco fecha o painel.
     clique_livre: Cell<bool>,
+    /// No GNOME, que não tem layer-shell, o painel é uma janela do tamanho do cartão.
+    janela_comum: bool,
 }
 
 pub fn icone(nome: &str) -> Image {
@@ -135,14 +140,21 @@ fn busca_sempre_visivel(aba: Tab) -> bool {
 impl Ui {
     pub fn new(app: &Rc<App>) -> Rc<Self> {
         let window = ApplicationWindow::new(&app.gtk_app);
-        window.init_layer_shell();
-        window.set_layer(Layer::Overlay);
-        window.set_keyboard_mode(KeyboardMode::Exclusive);
-        window.set_namespace(Some("supercola"));
-        // Zona 0: respeita painel e dock, e o cartão não fica atrás deles.
-        window.set_exclusive_zone(0);
-        for borda in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
-            window.set_anchor(borda, true);
+        let janela_comum = app.ambiente == Ambiente::Gnome;
+        if janela_comum {
+            window.set_title(Some(TITULO));
+            window.set_decorated(false);
+            window.set_resizable(false);
+        } else {
+            window.init_layer_shell();
+            window.set_layer(Layer::Overlay);
+            window.set_keyboard_mode(KeyboardMode::Exclusive);
+            window.set_namespace(Some("supercola"));
+            // Zona 0: respeita painel e dock, e o cartão não fica atrás deles.
+            window.set_exclusive_zone(0);
+            for borda in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
+                window.set_anchor(borda, true);
+            }
         }
         window.add_css_class("supercola-surface");
 
@@ -253,6 +265,7 @@ impl Ui {
             filtro: RefCell::default(),
             origem: Cell::new((0.0, 0.0)),
             clique_livre: Cell::new(false),
+            janela_comum,
         });
         ui.ligar(app, &voltar);
         ui.ligar_arraste(app);
@@ -369,7 +382,7 @@ impl Ui {
         let (ui, a) = (Rc::downgrade(self), app.clone());
         movimento.connect_enter(move |_, x, y| {
             if let Some(ui) = ui.upgrade() {
-                if a.cfg.borrow().position == Position::NearPointer {
+                if a.cfg.borrow().position == Position::NearPointer && !ui.janela_comum {
                     ui.perto_do_ponteiro(x, y);
                     ui.acompanhar_desfoque(&a);
                 }
@@ -400,6 +413,11 @@ impl Ui {
                 g.set_state(gtk4::EventSequenceState::Denied);
                 return;
             };
+            if ui.janela_comum {
+                ui.mover_janela(g, x, y);
+                g.set_state(gtk4::EventSequenceState::Claimed);
+                return;
+            }
             ui.origem.set((f64::from(canto.x()), f64::from(canto.y())));
             // Fica com o toque: soltar não pode contar como clique fora.
             g.set_state(gtk4::EventSequenceState::Claimed);
@@ -407,7 +425,7 @@ impl Ui {
 
         let (ui, a) = (Rc::downgrade(self), app.clone());
         arraste.connect_drag_update(move |_, dx, dy| {
-            if let Some(ui) = ui.upgrade() {
+            if let Some(ui) = ui.upgrade().filter(|u| !u.janela_comum) {
                 let (x, y) = ui.origem.get();
                 ui.posicionar((x + dx) as i32, (y + dy) as i32);
                 ui.acompanhar_desfoque(&a);
@@ -423,6 +441,21 @@ impl Ui {
             }
         });
         self.window.add_controller(arraste);
+    }
+
+    /// Em janela comum, quem move é o compositor.
+    fn mover_janela(&self, gesto: &gtk4::GestureDrag, x: f64, y: f64) {
+        let superficie = self.window.surface();
+        let topo = superficie.and_downcast_ref::<gdk::Toplevel>();
+        if let (Some(topo), Some(dispositivo)) = (topo, gesto.current_event_device()) {
+            topo.begin_move(
+                &dispositivo,
+                gesto.current_button() as i32,
+                x,
+                y,
+                gesto.current_event_time(),
+            );
+        }
     }
 
     fn ligar_perda_de_foco(self: &Rc<Self>, app: &Rc<App>) {
@@ -657,13 +690,20 @@ impl Ui {
             let card = self.card.clone();
             glib::timeout_add_local_once(Duration::from_millis(60), move || card.set_opacity(1.0));
         }
-        self.clique_livre.set(false);
-        self.window.set_keyboard_mode(KeyboardMode::Exclusive);
-        self.liberar_entrada();
+        if let Some(shell) = &app.shell {
+            shell.posicionar(app.cfg.borrow().position);
+        }
+        // Sem superfície de tela cheia, perder o foco é o único sinal de um clique fora.
+        self.clique_livre.set(self.janela_comum);
+        if !self.janela_comum {
+            self.window.set_keyboard_mode(KeyboardMode::Exclusive);
+            self.liberar_entrada();
+        }
         self.window.present();
         self.focar(app);
         self.acompanhar_desfoque(app);
-        if app.cosmic && app.cfg.borrow().position == Position::BottomRight {
+        // O COSMIC move o foco ao receber um clique, e é isso que permite soltar a entrada.
+        if app.ambiente == Ambiente::Cosmic && app.cfg.borrow().position == Position::BottomRight {
             self.agendar_clique_livre();
         }
     }

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Super Cola
+Comment=Open the emoji panel
+Exec=supercola-toggle home
+Icon=supercola
+NoDisplay=true
+Terminal=false
+StartupNotify=false
+OnlyShowIn=KDE;
+X-KDE-Shortcuts=Meta+;

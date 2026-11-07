@@ -1,5 +1,8 @@
 //! Injeta Ctrl+V (ou Ctrl+Shift+V) pelo teclado virtual do Wayland.
 //!
+//! O KWin não tem esse protocolo: lá as teclas vão pelo `org_kde_kwin_fake_input`, que
+//! recebe códigos evdev e usa o mapa atual, como o `no_keymap` do COSMIC.
+//!
 //! Há duas sequências, porque os compositores tratam o mapa do teclado virtual de
 //! formas incompatíveis:
 //!
@@ -22,6 +25,7 @@ use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::{
     zwp_virtual_keyboard_manager_v1::ZwpVirtualKeyboardManagerV1 as Manager,
     zwp_virtual_keyboard_v1::ZwpVirtualKeyboardV1 as Keyboard,
 };
+use wayland_protocols_plasma::fake_input::client::org_kde_kwin_fake_input::OrgKdeKwinFakeInput as FakeInput;
 use xkbcommon::xkb;
 
 const PRESSIONADA: u32 = 1;
@@ -31,6 +35,8 @@ const EVDEV_PARA_XKB: u32 = 8;
 const PAUSA: Duration = Duration::from_millis(20);
 /// O app recebe o mapa novo antes da tecla: sem folga, a primeira tecla pode se perder.
 const FOLGA_DO_MAPA: Duration = Duration::from_millis(60);
+/// `keyboard_key` entrou no `fake_input` nesta versão.
+const VERSAO_COM_TECLAS: u32 = 4;
 
 /// Códigos evdev das teclas da colagem.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -112,14 +118,22 @@ impl Dispatch<WlKeyboard, ()> for State {
 delegate_noop!(State: ignore WlSeat);
 delegate_noop!(State: Manager);
 delegate_noop!(State: Keyboard);
+delegate_noop!(State: FakeInput);
+
+/// Por onde as teclas entram no compositor.
+enum Injetor {
+    Virtual(Keyboard),
+    Kde(FakeInput),
+}
 
 struct Sessao {
     conn: Connection,
     queue: EventQueue<State>,
     state: State,
     seat: WlSeat,
-    teclado: Keyboard,
-    cosmic: bool,
+    injetor: Injetor,
+    /// As teclas valem no mapa atual, sem enviar um mapa próprio.
+    mapa_atual: bool,
     tempo: u32,
 }
 
@@ -128,19 +142,29 @@ impl Sessao {
         let conn = Connection::connect_to_env()?;
         let (globals, queue) = registry_queue_init::<State>(&conn)?;
         let qh = queue.handle();
-        let manager: Manager = globals.bind(&qh, 1..=1, ())?;
         let seat: WlSeat = globals.bind(&qh, 1..=1, ())?;
-        let teclado = manager.create_virtual_keyboard(&seat, &qh, ());
         let cosmic = globals
             .contents()
             .with_list(|lista| lista.iter().any(|g| g.interface.starts_with("zcosmic_")));
+        let (injetor, mapa_atual) = match globals.bind::<Manager, _, _>(&qh, 1..=1, ()) {
+            Ok(manager) => (
+                Injetor::Virtual(manager.create_virtual_keyboard(&seat, &qh, ())),
+                cosmic,
+            ),
+            Err(_) => {
+                let falso: FakeInput =
+                    globals.bind(&qh, VERSAO_COM_TECLAS..=VERSAO_COM_TECLAS, ())?;
+                falso.authenticate("Super Cola".into(), "Colar o item escolhido".into());
+                (Injetor::Kde(falso), true)
+            }
+        };
         Ok(Self {
             conn,
             queue,
             state: State::default(),
             seat,
-            teclado,
-            cosmic,
+            injetor,
+            mapa_atual,
             tempo: 0,
         })
     }
@@ -150,8 +174,18 @@ impl Sessao {
         Ok(())
     }
 
+    fn teclado(&self) -> crate::R<&Keyboard> {
+        match &self.injetor {
+            Injetor::Virtual(t) => Ok(t),
+            Injetor::Kde(_) => Err("o KWin não tem teclado virtual".into()),
+        }
+    }
+
     fn tecla(&mut self, codigo: u32, estado: u32) -> crate::R {
-        self.teclado.key(self.tempo, codigo, estado);
+        match &self.injetor {
+            Injetor::Virtual(t) => t.key(self.tempo, codigo, estado),
+            Injetor::Kde(f) => f.keyboard_key(codigo, estado),
+        }
         self.tempo += PAUSA.as_millis() as u32;
         self.sincronizar()?;
         std::thread::sleep(PAUSA);
@@ -159,7 +193,7 @@ impl Sessao {
     }
 
     fn modificadores(&mut self, mascara: u32) -> crate::R {
-        self.teclado.modifiers(mascara, 0, 0, 0);
+        self.teclado()?.modifiers(mascara, 0, 0, 0);
         self.sincronizar()?;
         std::thread::sleep(PAUSA);
         Ok(())
@@ -188,9 +222,11 @@ impl Sessao {
     }
 
     fn usar_mapa_atual(&mut self) -> crate::R {
+        let Injetor::Virtual(teclado) = &self.injetor else {
+            return Ok(());
+        };
         let vazio = File::open("/dev/null")?;
-        self.teclado
-            .keymap(KeymapFormat::NoKeymap as u32, vazio.as_fd(), 0);
+        teclado.keymap(KeymapFormat::NoKeymap as u32, vazio.as_fd(), 0);
         self.sincronizar()
     }
 
@@ -232,7 +268,7 @@ impl Sessao {
         std::fs::remove_file(&caminho)?;
         arquivo.write_all(texto.as_bytes())?;
         arquivo.write_all(&[0])?;
-        self.teclado.keymap(
+        self.teclado()?.keymap(
             KeymapFormat::XkbV1 as u32,
             arquivo.as_fd(),
             texto.len() as u32 + 1,
@@ -258,24 +294,26 @@ impl Sessao {
     }
 
     fn encerrar(self) -> crate::R {
-        self.teclado.destroy();
+        if let Injetor::Virtual(teclado) = &self.injetor {
+            teclado.destroy();
+        }
         self.conn.flush()?;
         Ok(())
     }
 }
 
 /// `SUPERCOLA_PASTE_MODE` força uma das sequências nos testes.
-fn usa_mapa_atual(cosmic: bool) -> bool {
+fn usa_mapa_atual(padrao: bool) -> bool {
     match std::env::var("SUPERCOLA_PASTE_MODE").as_deref() {
         Ok("seat") => true,
         Ok("us") => false,
-        _ => cosmic,
+        _ => padrao,
     }
 }
 
 pub fn paste(shift: bool) -> crate::R {
     let mut sessao = Sessao::abrir()?;
-    if !usa_mapa_atual(sessao.cosmic) {
+    if !usa_mapa_atual(sessao.mapa_atual) {
         sessao.colar_com_mapa_us(shift)?;
         return sessao.encerrar();
     }
@@ -294,8 +332,8 @@ pub fn paste(shift: bool) -> crate::R {
     }
 }
 
-/// Aperta uma tecla pelo nome xkb, como `Return`. Só funciona no COSMIC, e existe para
-/// os testes na sessão real: não troca o mapa de teclas, ao contrário do `wtype`.
+/// Aperta uma tecla pelo nome xkb, como `Return`. Só funciona no COSMIC e no KDE, e existe
+/// para os testes na sessão real: não troca o mapa de teclas, ao contrário do `wtype`.
 pub fn tap(nome: &str) -> crate::R {
     let simbolo = xkb::keysym_from_name(nome, xkb::KEYSYM_NO_FLAGS).raw();
     let mut sessao = Sessao::abrir()?;

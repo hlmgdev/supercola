@@ -73,6 +73,15 @@ pub fn offered(flavors: &[Flavor], transient: bool) -> Vec<(String, Arc<Vec<u8>>
     saida
 }
 
+/// O GDK só serve tipos com barra. Apelidos como `UTF8_STRING` seriam anunciados e
+/// chegariam vazios, e são os preferidos dos apps X11.
+pub fn so_para_gdk(oferta: &[(String, Arc<Vec<u8>>)]) -> Vec<&(String, Arc<Vec<u8>>)> {
+    oferta
+        .iter()
+        .filter(|(mime, _)| mime.contains('/'))
+        .collect()
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
     Text,
@@ -120,6 +129,16 @@ impl Clip {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gdk_recebe_so_tipos_que_consegue_servir() {
+        let oferta = offered(&[Flavor::text("oi")], true);
+        let nomes: Vec<&str> = so_para_gdk(&oferta)
+            .iter()
+            .map(|(mime, _)| mime.as_str())
+            .collect();
+        assert_eq!(nomes, [MIME_TEXT, "text/plain", MIME_TRANSIENT]);
+    }
 
     fn mimes(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()

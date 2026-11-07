@@ -1,9 +1,13 @@
 //! Grava os atalhos do COSMIC com backup. Nunca sobrescreve um atalho alheio.
 use std::fs;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use supercola_core::shortcut::{merge, Merge};
 use supercola_core::xdg;
+use supercola_wayland::probe::Ambiente;
+
+use crate::app::App;
 
 /// `Super+.` é o zoom do COSMIC; `Super+;` também abre o painel de emoji no Windows.
 const ATALHOS: &[(&str, &str, &str)] = &[
@@ -15,7 +19,7 @@ fn custom_path() -> PathBuf {
     xdg::config_home().join("cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom")
 }
 
-fn marcador() -> PathBuf {
+pub fn marcador() -> PathBuf {
     xdg::data_dir().join("shortcut-done")
 }
 
@@ -54,6 +58,11 @@ fn registrar(nome: &str, tecla: &str, comando: &str) -> Result<String, String> {
 
 /// Tenta todos, mesmo que um falhe. `Err` só quando algum não pôde ser registrado.
 pub fn install() -> Result<String, String> {
+    match Ambiente::detectar() {
+        Ambiente::Kde => return crate::atalho_kde::install(),
+        Ambiente::Gnome => return crate::atalho_gnome::install(),
+        _ => {}
+    }
     let resultados: Vec<_> = ATALHOS
         .iter()
         .map(|(nome, tecla, comando)| registrar(nome, tecla, comando))
@@ -71,16 +80,37 @@ pub fn install() -> Result<String, String> {
     }
 }
 
-/// Na primeira execução no COSMIC, registra os atalhos uma única vez.
-pub fn first_run() {
-    if !is_cosmic() || marcador().exists() {
+/// Só o que uma troca aceita pelo usuário mudou. No COSMIC, nada é trocado.
+pub fn restore() -> Result<String, String> {
+    match Ambiente::detectar() {
+        Ambiente::Kde => crate::atalho_kde::restaurar(),
+        Ambiente::Gnome => crate::atalho_gnome::restaurar(),
+        _ => Ok("Nenhum atalho foi trocado.".to_string()),
+    }
+}
+
+pub fn marcar() {
+    if let Some(pai) = marcador().parent() {
+        let _ = fs::create_dir_all(pai);
+    }
+    let _ = fs::write(marcador(), b"");
+}
+
+/// Na primeira execução, registra os atalhos uma única vez.
+pub fn first_run(app: &Rc<App>) {
+    if marcador().exists() {
+        return;
+    }
+    match app.ambiente {
+        Ambiente::Kde => return crate::atalho_kde::primeira_execucao(app),
+        Ambiente::Gnome => return crate::atalho_gnome::primeira_execucao(app),
+        _ => {}
+    }
+    if !is_cosmic() {
         return;
     }
     match install() {
         Ok(msg) | Err(msg) => eprintln!("supercola: {msg}"),
     }
-    if let Some(pai) = marcador().parent() {
-        let _ = fs::create_dir_all(pai);
-    }
-    let _ = fs::write(marcador(), b"");
+    marcar();
 }

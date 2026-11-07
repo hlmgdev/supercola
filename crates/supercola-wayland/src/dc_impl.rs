@@ -1,7 +1,6 @@
 // Incluído nos módulos `ext` e `wlr`: os dois protocolos têm a mesma forma.
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Write as _;
 use std::os::fd::AsFd;
 
 use wayland_client::backend::{ObjectId, WaylandError};
@@ -57,17 +56,20 @@ impl Dispatch<Device, ()> for State {
     ) {
         let dev::Event::Selection { id: Some(offer) } = event else { return };
         let mimes = state.offers.remove(&offer.id()).unwrap_or_default();
-        if mimes.iter().any(|m| m == supercola_core::model::MIME_TRANSIENT) {
-            offer.destroy();
-            return;
-        }
-        if supercola_core::filter::is_secret(&mimes) {
-            offer.destroy();
-            (state.sink)(Event::Secret);
-            return;
-        }
+        let formatos = match supercola_core::filter::decidir(&mimes) {
+            Decisao::Ignorar => {
+                offer.destroy();
+                return;
+            }
+            Decisao::Segredo => {
+                offer.destroy();
+                (state.sink)(Event::Secret);
+                return;
+            }
+            Decisao::Ler(formatos) => formatos,
+        };
         let mut canos = Vec::new();
-        for (canonico, oferecido) in supercola_core::model::wanted(&mimes) {
+        for (canonico, oferecido) in formatos {
             let Ok((leitor, escritor)) = std::io::pipe() else { continue };
             offer.receive(oferecido, escritor.as_fd());
             canos.push((canonico, leitor));
@@ -192,5 +194,9 @@ pub fn start(sink: Sink) -> crate::R<Handle> {
             eprintln!("supercola: conexão do clipboard caiu: {e}");
         }
     })?;
-    Ok(Handle { tx, wake: escritor, backend: BACKEND })
+    Ok(Handle::novo(BACKEND, move |oferta| {
+        if tx.send(oferta).is_ok() {
+            let _ = (&escritor).write_all(&[1]);
+        }
+    }))
 }

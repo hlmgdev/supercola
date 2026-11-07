@@ -1,10 +1,11 @@
 //! Monitora e grava o clipboard por data-control: `ext` de preferência, `wlr` como reserva.
-use std::io::Read;
+use std::io::{Read, Write};
 use std::os::fd::{AsRawFd, RawFd};
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use supercola_core::filter::Decisao;
 use supercola_core::history::MAX_ITEM_BYTES;
 use supercola_core::model::Flavor;
 
@@ -22,21 +23,24 @@ pub enum Event {
 pub type Sink = Arc<dyn Fn(Event) + Send + Sync>;
 
 /// Par formato anunciado e dados, já com os apelidos de texto.
-type Oferta = Vec<(String, Arc<Vec<u8>>)>;
+pub type Oferta = Vec<(String, Arc<Vec<u8>>)>;
 
-/// Canal para pedir escritas à thread do Wayland.
+/// Como pedir escritas ao backend em uso.
 pub struct Handle {
-    tx: mpsc::Sender<Oferta>,
-    wake: std::io::PipeWriter,
+    gravar: Box<dyn Fn(Oferta)>,
     pub backend: &'static str,
 }
 
 impl Handle {
-    pub fn set(&self, offered: Vec<(String, Arc<Vec<u8>>)>) {
-        use std::io::Write;
-        if self.tx.send(offered).is_ok() {
-            let _ = (&self.wake).write_all(&[1]);
+    pub fn novo(backend: &'static str, gravar: impl Fn(Oferta) + 'static) -> Self {
+        Self {
+            gravar: Box::new(gravar),
+            backend,
         }
+    }
+
+    pub fn set(&self, offered: Oferta) {
+        (self.gravar)(offered);
     }
 }
 

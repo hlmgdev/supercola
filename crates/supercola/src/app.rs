@@ -18,6 +18,7 @@ use supercola_core::store::Store;
 use supercola_core::xdg;
 use supercola_wayland::clipboard::{self, Event, Handle};
 use supercola_wayland::focus::Focus;
+use supercola_wayland::probe::Ambiente;
 
 use crate::blur::Desfoque;
 use crate::panel::Ui;
@@ -31,11 +32,12 @@ pub struct App {
     pub recent: RefCell<Recent>,
     pub texturas: RefCell<HashMap<u64, gdk::Texture>>,
     pub janela_config: RefCell<Option<gtk4::Window>>,
-    /// O compositor é o COSMIC, que move o foco ao receber um clique.
-    pub cosmic: bool,
+    pub ambiente: Ambiente,
     /// Um popover aberto tira o foco da janela, sem que isso seja um clique fora.
     pub popover_aberto: Cell<bool>,
     pub desfoque: Option<Desfoque>,
+    /// A extensão do GNOME, que faz o que os protocolos fazem nos outros ambientes.
+    pub shell: Option<crate::bridge::Shell>,
     ui: RefCell<Option<Rc<Ui>>>,
     store: RefCell<Option<Store>>,
     clip: Option<Handle>,
@@ -83,7 +85,15 @@ impl App {
         let sink = Arc::new(move |ev: Event| {
             let _ = tx.send_blocking(ev);
         });
-        let clip = match clipboard::spawn(sink) {
+        let ambiente = Ambiente::detectar();
+        let foco_externo = Focus::default();
+        let shell = (ambiente == Ambiente::Gnome)
+            .then(|| crate::bridge::iniciar_gnome(foco_externo.clone(), sink.clone()));
+        let clip = match &shell {
+            Some(s) => Ok(s.clipboard()),
+            None => clipboard::spawn(sink),
+        };
+        let clip = match clip {
             Ok(h) => {
                 eprintln!("supercola: clipboard via {}", h.backend);
                 Some(h)
@@ -93,14 +103,23 @@ impl App {
                 None
             }
         };
-        let focus = match supercola_wayland::focus::spawn() {
-            Ok((f, backend)) => {
-                eprintln!("supercola: foco via {backend}");
-                Some(f)
-            }
-            Err(e) => {
-                eprintln!("supercola: sem detecção de foco: {e}");
-                None
+        let focus = if shell.is_some() {
+            eprintln!("supercola: foco via extensão do GNOME");
+            Some(foco_externo)
+        } else if ambiente == Ambiente::Kde {
+            crate::bridge::iniciar_kde(gtk_app, foco_externo.clone());
+            eprintln!("supercola: foco via script do KWin");
+            Some(foco_externo)
+        } else {
+            match supercola_wayland::focus::spawn() {
+                Ok((f, backend)) => {
+                    eprintln!("supercola: foco via {backend}");
+                    Some(f)
+                }
+                Err(e) => {
+                    eprintln!("supercola: sem detecção de foco: {e}");
+                    None
+                }
             }
         };
 
@@ -120,10 +139,10 @@ impl App {
             recent: RefCell::new(Recent::load()),
             texturas: RefCell::default(),
             janela_config: RefCell::new(None),
-            cosmic: supercola_wayland::probe::globals()
-                .is_ok_and(|g| g.iter().any(|(nome, _)| nome.starts_with("zcosmic_"))),
+            ambiente,
             popover_aberto: Cell::default(),
             desfoque,
+            shell,
             ui: RefCell::new(None),
             store: RefCell::new(store),
             clip,
@@ -150,7 +169,7 @@ impl App {
             }
         });
 
-        crate::shortcut::first_run();
+        crate::shortcut::first_run(&app);
     }
 
     pub fn reaplicar_tema(&self) {
@@ -292,7 +311,7 @@ impl App {
         let Some(display) = gdk::Display::default() else {
             return;
         };
-        let provedores: Vec<gdk::ContentProvider> = oferta
+        let provedores: Vec<gdk::ContentProvider> = model::so_para_gdk(oferta)
             .iter()
             .map(|(mime, dados)| {
                 gdk::ContentProvider::for_bytes(mime, &glib::Bytes::from(dados.as_slice()))
@@ -321,8 +340,9 @@ impl App {
             None
         };
         let oferta = model::offered(&sabores, transient);
+        // No GNOME só o painel em foco grava vários formatos: a extensão grava um por vez.
         match (&self.clip, cfg.write_backend) {
-            (Some(c), WriteBackend::DataControl) => c.set(oferta),
+            (Some(c), WriteBackend::DataControl) if self.shell.is_none() => c.set(oferta),
             _ => self.gravar_gdk(&oferta),
         }
         self.esconder();
@@ -332,7 +352,17 @@ impl App {
         }
         let shift = filter::in_list(self.alvo.borrow().as_deref(), &cfg.terminals);
         let (tx, rx) = async_channel::bounded::<()>(1);
+        let shell = self.shell.clone();
         glib::timeout_add_local_once(Duration::from_millis(cfg.paste_delay_ms), move || {
+            if let Some(shell) = shell {
+                glib::spawn_future_local(async move {
+                    if let Err(e) = shell.colar(shift).await {
+                        eprintln!("supercola: não consegui colar: {e}");
+                    }
+                    let _ = tx.send(()).await;
+                });
+                return;
+            }
             std::thread::spawn(move || {
                 if let Err(e) = supercola_wayland::keyboard::paste(shift) {
                     eprintln!("supercola: não consegui colar: {e}");

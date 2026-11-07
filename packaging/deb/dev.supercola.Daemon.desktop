@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Super Cola
+Comment=Clipboard history daemon
+Exec=/usr/bin/supercola
+Icon=supercola
+NoDisplay=true
+Terminal=false
+OnlyShowIn=KDE;
+X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input

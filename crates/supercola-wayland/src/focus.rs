@@ -31,6 +31,10 @@ impl Focus {
     pub fn current(&self) -> Option<String> {
         self.0.lock().ok()?.clone()
     }
+    /// Para ambientes que informam o foco por fora do Wayland, como o script do KWin.
+    pub fn definir(&self, app: String) {
+        self.set(app);
+    }
     fn set(&self, app: String) {
         if let Ok(mut f) = self.0.lock() {
             *f = Some(app);

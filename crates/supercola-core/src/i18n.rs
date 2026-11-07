@@ -129,6 +129,14 @@ const TEXTOS: &[(&str, &str, &str)] = &[
     ("sym_idiomas", "Símbolos de idiomas", "Language symbols"),
     ("gif_trending", "Em alta", "Trending"),
     ("gif_powered", "Fornecido por", "Powered By"),
+    ("atalho_titulo", "Usar Super+V no Super Cola?", "Use Super+V for Super Cola?"),
+    ("atalho_detalhe", "Hoje essa tecla abre: {acao}.\n\nSe trocar, ela passa a abrir o Super Cola, e você pode desfazer com supercola --restore-shortcuts. Se mantiver, nada muda, e o Super Cola abre com Super+;.", "This key currently opens: {acao}.\n\nIf you switch, it opens Super Cola instead, and you can undo it with supercola --restore-shortcuts. If you keep it, nothing changes, and Super Cola opens with Super+;."),
+    ("atalho_notificacoes", "as notificações, que continuam em Super+M", "notifications, which stay on Super+M"),
+    ("extensao_titulo", "Falta um passo", "One more step"),
+    ("extensao_detalhe", "O Super Cola ativou a extensão dele para o GNOME. Encerre a sessão e entre de novo para ela começar a funcionar.", "Super Cola has turned on its GNOME extension. Log out and back in for it to start working."),
+    ("extensao_ok", "Entendi", "Got it"),
+    ("atalho_manter", "Manter como está", "Keep it"),
+    ("atalho_trocar", "Usar Super+V", "Use Super+V"),
 ];
 
 #[cfg(test)]

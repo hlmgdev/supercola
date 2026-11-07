@@ -1,6 +1,9 @@
 //! Daemon e interface do Super Cola: histórico da área de transferência no estilo Win+V.
 mod app;
+mod atalho_gnome;
+mod atalho_kde;
 mod blur;
+mod bridge;
 mod doctor;
 mod gif;
 mod grid;
@@ -23,7 +26,8 @@ uso: supercola [opção]
 
   (nenhuma)            inicia o daemon
   --doctor             verifica protocolos e configuração
-  --install-shortcut   registra Super+V no COSMIC
+  --install-shortcut   registra os atalhos no COSMIC, no KDE ou no GNOME
+  --restore-shortcuts  devolve a tecla que foi cedida ao Super Cola
   --version            mostra a versão
 ";
 
@@ -42,10 +46,10 @@ fn daemon() -> ExitCode {
         .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
     gtk_app.connect_startup(|gtk_app| {
-        if !gtk4_layer_shell::is_supported() {
-            eprintln!(
-                "supercola: o compositor não tem layer-shell. Rode dentro de uma sessão COSMIC."
-            );
+        let gnome = supercola_wayland::probe::Ambiente::detectar()
+            == supercola_wayland::probe::Ambiente::Gnome;
+        if !gtk4_layer_shell::is_supported() && !gnome {
+            eprintln!("supercola: este ambiente não tem layer-shell, e o painel precisa dele.");
             gtk_app.quit();
             return;
         }
@@ -65,6 +69,16 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("--install-shortcut") => match shortcut::install() {
+            Ok(msg) => {
+                println!("{msg}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("--restore-shortcuts") => match shortcut::restore() {
             Ok(msg) => {
                 println!("{msg}");
                 ExitCode::SUCCESS
