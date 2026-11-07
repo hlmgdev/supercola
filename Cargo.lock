@@ -1187,7 +1187,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "supercola"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "async-channel",
  "gdk4-wayland",
@@ -1202,7 +1202,7 @@ dependencies = [
 
 [[package]]
 name = "supercola-core"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "rusqlite",
  "serde",
@@ -1228,11 +1228,11 @@ dependencies = [
 
 [[package]]
 name = "supercola-toggle"
-version = "1.1.0"
+version = "1.2.0"
 
 [[package]]
 name = "supercola-wayland"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "cosmic-protocols",
  "libc",

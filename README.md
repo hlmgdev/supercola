@@ -23,8 +23,10 @@ Não funciona em sessões X11, no Cinnamon, no Debian 12, no Ubuntu 22.04 nem no
 
 ## Instalação
 
+Baixe da [última versão](https://github.com/hlmgdev/supercola/releases/latest) o `supercola_1.2.0_amd64.deb`, o `SHA256SUMS` e o `SHA256SUMS.asc`. Confira o download como descrito em [Conferir o download](#conferir-o-download) e instale:
+
 ```sh
-sudo apt install ./supercola_1.1.0_amd64.deb
+sudo apt install ./supercola_1.2.0_amd64.deb
 ```
 
 Encerre a sessão e entre de novo, ou rode `supercola &`. O que acontece na primeira execução depende do ambiente:
@@ -40,6 +42,42 @@ Para conferir se está tudo certo:
 ```sh
 supercola --doctor
 ```
+
+## Atualizações
+
+O pacote configura o repositório `https://hlmgdev.github.io/supercola-apt`, então as versões novas chegam junto com as atualizações do sistema, pela loja ou por `sudo apt update && sudo apt upgrade`. Quem tem a 1.0.0 ou a 1.1.0 precisa instalar a 1.2.0 à mão uma vez.
+
+O pacote instala três arquivos em `/etc/apt`:
+
+| Arquivo | Para quê |
+|---|---|
+| `sources.list.d/supercola.sources` | Endereço do repositório |
+| `keyrings/supercola-archive-keyring.gpg` | Chave pública que confere a assinatura do repositório. Ela não vale para nenhum outro |
+| `preferences.d/supercola.pref` | Deste repositório, o apt só instala o pacote `supercola` |
+
+O pacote não roda nenhum script durante a instalação: ele só copia arquivos.
+
+Para deixar de receber atualizações, apague `/etc/apt/sources.list.d/supercola.sources`. As atualizações do pacote não recriam o arquivo.
+
+### Conferir o download
+
+Cada versão traz um `SHA256SUMS` assinado com a chave do repositório. A impressão digital dessa chave é:
+
+```text
+8EC40968C091F69686334ECFF36E6858EC0E92C2
+```
+
+Na pasta do download, sem importar nada para o seu GnuPG:
+
+```sh
+curl -fsSLO https://hlmgdev.github.io/supercola-apt/supercola-archive-keyring.asc
+gpg --show-keys supercola-archive-keyring.asc
+gpg --dearmor < supercola-archive-keyring.asc > supercola-archive-keyring.gpg
+gpgv --keyring ./supercola-archive-keyring.gpg SHA256SUMS.asc SHA256SUMS
+sha256sum -c SHA256SUMS
+```
+
+A impressão digital mostrada pelo `gpg --show-keys` precisa ser igual à de cima. O `gpgv` precisa dizer "Assinatura correta", ou "Good signature" em inglês, e o `sha256sum`, "SUCESSO" ou "OK". Se algo não bater, não instale.
 
 ## Uso
 
@@ -116,6 +154,8 @@ Depois, remova o pacote:
 sudo apt purge supercola
 ```
 
+O `purge` também apaga os três arquivos do repositório de atualizações. Com `apt remove`, eles ficam, e o repositório continua configurado.
+
 Os atalhos ficam nas suas configurações e não são removidos com o pacote:
 
 - **COSMIC:** apague as linhas com `supercola-toggle` no arquivo `custom`.
@@ -135,12 +175,15 @@ sudo apt install build-essential pkg-config git curl meson ninja-build libwaylan
   libwayland-dev wayland-protocols libgtk-4-dev libxkbcommon-dev dpkg-dev \
   sway wl-clipboard grim wtype xwayland
 curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal -c clippy -c rustfmt
+cargo install cargo-audit --locked
 ```
 
-Essa versão do Ubuntu não tem o gtk4-layer-shell, então ele é compilado da fonte e embutido no pacote:
+Essa versão do Ubuntu não tem o gtk4-layer-shell, então ele é compilado da fonte e embutido no pacote. O hash abaixo é o mesmo do código que o Debian empacota:
 
 ```sh
-curl -fsSL https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/v1.3.0.tar.gz | tar -xz
+curl -fsSLO https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/v1.3.0.tar.gz
+echo '1ebb01ab14e98afd1727f68f64981c37bd23305b1f131f5667c02b94cf593192  v1.3.0.tar.gz' | sha256sum -c
+tar -xzf v1.3.0.tar.gz
 cd gtk4-layer-shell-1.3.0
 meson setup build --prefix=/usr/local --libdir=lib --buildtype=release \
   -Dexamples=false -Ddocs=false -Dtests=false -Dintrospection=false -Dvapi=false
@@ -178,12 +221,38 @@ bash tests/vm/gnome.sh ubuntu2404-gnome
 
 Os roteiros instalam o `.deb` de `dist/` do zero, usam teclas e cliques reais e tratam uma queda do GNOME Shell como falha. `bash tests/vm/vm.sh tela NOME` abre a tela de uma VM para testar à mão. Rode um roteiro por vez: com várias VMs disputando a CPU, um app lento pode perder teclas.
 
+O repositório de atualizações tem um roteiro próprio, que roda em qualquer uma das VMs:
+
+```sh
+bash tests/vm/apt.sh ubuntu2404-gnome
+bash tests/vm/apt.sh debian13-kde
+bash tests/vm/apt.sh ubuntu2604-gnome
+```
+
+Ele monta um repositório com uma chave descartável, servido por este computador, e confere na VM a assinatura, a atualização, a recusa de índices adulterados ou assinados por outra chave, o bloqueio de pacotes alheios e a remoção. O Debian 13 e o Ubuntu 26.04 têm o apt 3, que confere assinaturas de outro jeito, por isso os três.
+
 A automação não consegue clicar no COSMIC. Antes de uma versão, confira à mão:
 
 - Colar um item antigo em um app nativo, em um app XWayland e em um terminal.
 - Digitar logo depois de colar: a primeira letra precisa aparecer.
 - Com o painel aberto, clicar em outra janela e na área de trabalho vazia.
 - Arrastar o painel pela alça.
+
+### Publicar uma versão
+
+1. Atualize a versão no `Cargo.toml`, rode `cargo update --workspace` e escreva a entrada do `CHANGELOG.md`.
+2. Gere o pacote e rode os testes acima. No COSMIC, rode `tests/integration/cosmic.sh` e `spike/run.sh` também na versão anterior, a partir da tag, e compare antes de fazer a conferência manual.
+3. Assine e publique no repositório apt, a partir de um clone do [supercola-apt](https://github.com/hlmgdev/supercola-apt):
+
+   ```sh
+   bash packaging/publish-apt.sh dist/supercola_<versão>_amd64.deb ../supercola-apt
+   ```
+
+   O script recusa um pacote com scripts de instalação, com setuid, com outra chave ou com uma versão já publicada com outro conteúdo, e para se o `cargo audit` achar uma falha conhecida. Ele pede a senha da chave e não faz commit nem push.
+4. Faça commit e push no `supercola-apt` e espere o GitHub Pages publicar.
+5. Crie a Release com o `.deb`, o `SHA256SUMS` e o `SHA256SUMS.asc` de `dist/`.
+
+A chave privada fica só com o mantenedor e vence em 6 de novembro de 2031. Antes disso, estenda a validade com `gpg --quick-set-expire`, exporte a chave pública para `packaging/apt/supercola-archive-keyring.asc` e publique uma versão nova, que leva a chave atualizada aos usuários.
 
 As medidas do painel e as diferenças em relação ao Windows estão em [docs/visual-spec.md](docs/visual-spec.md).
 
