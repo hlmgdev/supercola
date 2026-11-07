@@ -1213,6 +1213,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "supercola-spike"
+version = "0.0.0"
+dependencies = [
+ "cosmic-protocols",
+ "gtk4",
+ "gtk4-layer-shell",
+ "supercola-wayland",
+ "wayland-client",
+ "wayland-protocols",
+ "wayland-protocols-misc",
+ "wayland-protocols-wlr",
+]
+
+[[package]]
 name = "supercola-toggle"
 version = "1.0.0"
 

@@ -1,0 +1,15 @@
+[package]
+name = "supercola-spike"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+supercola-wayland = { path = "../crates/supercola-wayland" }
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
+wayland-protocols-misc = { version = "0.3", features = ["client"] }
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
+gtk4 = { version = "0.10", features = ["v4_14"] }
+gtk4-layer-shell = "0.6"
