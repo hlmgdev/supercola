@@ -1,0 +1,8 @@
+# Deste repositório, só o pacote supercola pode ser instalado.
+Package: supercola
+Pin: origin "hlmgdev.github.io"
+Pin-Priority: 500
+
+Package: *
+Pin: origin "hlmgdev.github.io"
+Pin-Priority: -1

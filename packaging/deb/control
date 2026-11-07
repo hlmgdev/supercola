@@ -3,7 +3,7 @@ Version: @VERSION@
 Section: utils
 Priority: optional
 Architecture: @ARCH@
-Maintainer: Super Cola <noreply@supercola.invalid>
+Maintainer: Helton <hlmgdev@outlook.com>
 Depends: @DEPENDS@, librsvg2-common, fonts-noto-color-emoji
 Recommends: fonts-noto-cjk
 Installed-Size: @SIZE@

@@ -1,0 +1,9 @@
+# Atualizações do Super Cola, instaladas pelo pacote supercola.
+# Apague este arquivo para deixar de recebê-las.
+X-Repolib-Name: Super Cola
+Types: deb
+URIs: https://hlmgdev.github.io/supercola-apt
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /etc/apt/keyrings/supercola-archive-keyring.gpg
