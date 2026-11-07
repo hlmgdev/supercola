@@ -1,0 +1,241 @@
+/* Painel no estilo do Windows 11, com tokens Fluent definidos em theme.rs. */
+window.supercola-surface {
+  background: transparent;
+  box-shadow: none;
+}
+
+.sc-card-root {
+  background: @sc_panel;
+  color: @sc_text;
+  border-radius: 8px;
+  border: 1px solid @sc_panel_stroke;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.18);
+  font-family: "Segoe UI Variable", "Segoe UI", Selawik, "Noto Sans", sans-serif;
+  font-size: 14px;
+}
+
+.sc-card-root label { color: @sc_text; }
+.sc-card-root .sc-secondary { color: @sc_text2; font-size: 12px; }
+
+/* Topo: alça e botão de fechar */
+.sc-topo { min-height: 30px; }
+.sc-alca {
+  min-width: 32px;
+  min-height: 3px;
+  border-radius: 2px;
+  background: @sc_text3;
+}
+
+/* Busca */
+.sc-search {
+  background: @sc_card;
+  border: 1px solid @sc_stroke;
+  border-bottom: 1px solid @sc_text3;
+  border-radius: 4px;
+  min-height: 30px;
+  color: @sc_text;
+  box-shadow: none;
+  outline: none;
+}
+.sc-search:focus-within { border-bottom: 2px solid @sc_accent; }
+.sc-search text { color: @sc_text; }
+.sc-search image { color: @sc_text2; }
+
+/* Ícones: claro ou escuro mesmo se o GTK não recolorir o SVG. */
+.sc-card-root image { -gtk-icon-filter: @ICON_FILTER@; }
+
+/* Abas */
+.sc-tab {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 4px;
+  min-height: 40px;
+  min-width: 41px;
+  padding: 0;
+  color: @sc_text;
+  font-size: 13px;
+}
+.sc-tab:hover { background: @sc_subtle; }
+.sc-tab:checked { background: transparent; }
+.sc-tab:checked:hover { background: @sc_subtle; }
+.sc-tab label, .sc-tab image { color: @sc_text; }
+
+/* O traço fica sempre no lugar, para a linha não mudar de altura. */
+.sc-indicador {
+  min-width: 16px;
+  min-height: 3px;
+  margin-bottom: 1px;
+  border-radius: 2px;
+  background: transparent;
+}
+.sc-tab:checked .sc-indicador, .sc-group:checked .sc-indicador { background: @sc_accent; }
+
+/* Títulos */
+.sc-title { font-weight: 400; font-size: 14px; }
+.sc-link-texto { color: @sc_accent; font-size: 12px; }
+.sc-card-root .sc-link-texto { color: @sc_accent; }
+
+/* Limpar tudo */
+.sc-botao {
+  background: @sc_card;
+  border: 1px solid @sc_stroke;
+  box-shadow: none;
+  border-radius: 4px;
+  min-height: 22px;
+  padding: 0 9px;
+  font-size: 12px;
+  color: @sc_text;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);
+}
+.sc-botao:hover { background: @sc_card_hover; }
+.sc-botao label { color: @sc_text; }
+
+/* Botão pequeno ao lado de um título */
+.sc-botao-seta {
+  background: @sc_card;
+  border: 1px solid @sc_stroke;
+  box-shadow: none;
+  border-radius: 4px;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+}
+.sc-botao-seta:hover { background: @sc_card_hover; }
+
+/* Itens do histórico */
+list.sc-list, list.sc-list > row { background: transparent; padding: 0; outline: none; }
+list.sc-list > row { margin: 0 0 8px 0; }
+list.sc-list > row:hover, list.sc-list > row:selected, list.sc-list > row:focus { background: transparent; }
+.sc-item {
+  background: @sc_card;
+  border: 1px solid @sc_stroke;
+  border-radius: 4px;
+  padding: 0 6px 0 10px;
+  min-height: 78px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.09);
+}
+row:hover .sc-item { background: @sc_card_hover; }
+/* Sombra interna: os 2 px da seleção não deslocam o conteúdo. */
+row:selected .sc-item, row:focus .sc-item {
+  border: 1px solid @sc_accent;
+  box-shadow: inset 0 0 0 1px @sc_accent;
+}
+.sc-item picture { border-radius: 2px; }
+.sc-icon-btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 4px;
+  color: @sc_text2;
+}
+.sc-icon-btn image { color: @sc_text2; }
+.sc-icon-btn:hover { background: @sc_subtle; }
+.sc-icon-btn.sc-pinned image { color: @sc_accent; }
+
+/* Ações que aparecem ao lado do item */
+.sc-acao {
+  background: @sc_card;
+  border: 1px solid @sc_stroke;
+  box-shadow: none;
+  border-radius: 4px;
+  min-width: 74px;
+  min-height: 78px;
+  padding: 0;
+}
+.sc-acao:hover { background: @sc_card_hover; }
+
+/* Popover do tom de pele */
+popover.sc-menu > contents {
+  background: @sc_panel;
+  border: 1px solid @sc_panel_stroke;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.26);
+}
+popover.sc-menu > arrow { background: transparent; border: none; }
+
+/* Grades */
+gridview.sc-grid, gridview.sc-grid > child { background: transparent; outline: none; padding: 0; }
+gridview.sc-grid > child { border-radius: 4px; }
+gridview.sc-grid > child:hover { background: @sc_subtle; }
+gridview.sc-grid > child:selected {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px @sc_accent;
+}
+.sc-cell { color: @sc_text; }
+.sc-cell-emoji { font-size: 32px; min-height: 54px; }
+.sc-cell-symbol {
+  font-size: 18px;
+  min-height: 45px;
+  margin: 2px;
+  background: @sc_card;
+  border: 1px solid @sc_stroke;
+  border-radius: 4px;
+}
+.sc-cell-kaomoji {
+  font-size: 13px;
+  min-height: 31px;
+  margin: 2px;
+  background: @sc_card;
+  border: 1px solid @sc_stroke;
+  border-radius: 4px;
+}
+
+/* Seções da aba inicial */
+.sc-secao { margin: 14px 16px 8px 16px; }
+flowbox.sc-grade-inicio, flowbox.sc-grade-inicio > flowboxchild { background: transparent; padding: 0; outline: none; }
+flowbox.sc-grade-inicio > flowboxchild { border-radius: 4px; }
+flowbox.sc-grade-inicio > flowboxchild:hover { background: @sc_subtle; }
+flowbox.sc-grade-inicio > flowboxchild:focus { box-shadow: inset 0 0 0 2px @sc_accent; }
+
+/* Categorias, na linha das abas */
+.sc-group {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-width: 43px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 4px;
+  color: @sc_text;
+}
+.sc-group label, .sc-group image { color: @sc_text; }
+.sc-group:hover { background: @sc_subtle; }
+.sc-group:checked { background: transparent; }
+.sc-group:checked:hover { background: @sc_subtle; }
+.sc-group-texto { padding: 0 10px; font-size: 14px; }
+
+/* Tom de pele */
+.sc-tone { min-width: 26px; min-height: 26px; padding: 0; border-radius: 13px; border: 1px solid @sc_stroke; box-shadow: none; }
+.sc-tone-dot { min-width: 14px; min-height: 14px; border-radius: 7px; border: 1px solid @sc_stroke; }
+.sc-tone-0 { background: #FFCC22; }
+.sc-tone-1 { background: #F7D7C4; }
+.sc-tone-2 { background: #E5B795; }
+.sc-tone-3 { background: #C68E5F; }
+.sc-tone-4 { background: #8E5B39; }
+.sc-tone-5 { background: #4F342A; }
+
+/* GIF */
+flowbox.sc-gifs, flowbox.sc-gifs > flowboxchild { background: transparent; padding: 0; outline: none; }
+flowbox.sc-gifs > flowboxchild { margin: 2px; border-radius: 4px; }
+flowbox.sc-gifs > flowboxchild:hover, flowbox.sc-gifs > flowboxchild:selected { background: @sc_subtle; }
+.sc-gif { border-radius: 4px; background: @sc_subtle; }
+
+/* Estado vazio */
+.sc-empty-title { font-weight: 600; font-size: 16px; }
+.sc-accent-btn {
+  background: @sc_accent;
+  border: none;
+  box-shadow: none;
+  border-radius: 4px;
+  padding: 5px 16px;
+  min-height: 22px;
+}
+.sc-accent-btn label { color: @sc_on_accent; }
+
+scrollbar { background: transparent; border: none; }
+scrollbar slider { background: @sc_text3; min-width: 3px; border-radius: 2px; border: none; }

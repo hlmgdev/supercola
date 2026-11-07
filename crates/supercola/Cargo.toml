@@ -1,0 +1,17 @@
+[package]
+name = "supercola"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+supercola-core = { path = "../supercola-core" }
+supercola-wayland = { path = "../supercola-wayland" }
+async-channel = "2"
+gdk4-wayland = { version = "0.10", features = ["wayland_crate"] }
+gtk4 = { version = "0.10", features = ["v4_14"] }
+gtk4-layer-shell = "0.6"
+ureq = "2"
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
