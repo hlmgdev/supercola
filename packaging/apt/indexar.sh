@@ -9,7 +9,7 @@ umask 022
 PASTA=$(realpath "$1")
 CHAVE=$(realpath "$2")
 [ -d "$PASTA/pool" ] || { echo "sem pool/ em $PASTA" >&2; exit 1; }
-FPR=$(gpg --show-keys --with-colons "$CHAVE" | awk -F: '$1 == "fpr" { print $10; exit }')
+FPR=$(gpg --show-keys --with-colons "$CHAVE" | awk -F: '$1 == "fpr" && !f { print $10; f = 1 }')
 [ -n "$FPR" ] || { echo "chave pública ilegível: $CHAVE" >&2; exit 1; }
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

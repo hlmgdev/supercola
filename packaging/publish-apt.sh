@@ -58,9 +58,9 @@ done
 echo "ok: supercola $VERSAO, sem scripts de instalação, chave e origem conferidas"
 
 echo "== chave"
-FPR=$(gpg --show-keys --with-colons "$CHAVE" | awk -F: '$1 == "fpr" { print $10; exit }')
+FPR=$(gpg --show-keys --with-colons "$CHAVE" | awk -F: '$1 == "fpr" && !f { print $10; f = 1 }')
 gpg --list-secret-keys "$FPR" >/dev/null 2>&1 || falha "a chave privada $FPR não está neste GnuPG"
-VENCE=$(gpg --show-keys --with-colons "$CHAVE" | awk -F: '$1 == "pub" { print $7; exit }')
+VENCE=$(gpg --show-keys --with-colons "$CHAVE" | awk -F: '$1 == "pub" && !f { print $7; f = 1 }')
 if [ -n "$VENCE" ]; then
   AGORA=$(date +%s)
   [ "$VENCE" -gt "$AGORA" ] || falha "a chave venceu"
