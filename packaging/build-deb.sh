@@ -29,7 +29,7 @@ install -Dm644 data/supercola.svg "$RAIZ/usr/share/icons/hicolor/scalable/apps/s
 
 DOC="$RAIZ/usr/share/doc/supercola"
 install -d "$DOC"
-install -m644 data/licenses/* LICENSE README.md "$DOC/"
+install -m644 data/licenses/* LICENSE README.md CHANGELOG.md "$DOC/"
 
 # Dependências calculadas a partir dos binários, sem a biblioteca embutida.
 mkdir -p "$RAIZ/debian"
