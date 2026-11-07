@@ -61,6 +61,8 @@ v copiar "$N" "$DEB" /home/dev/sc.deb
 v ssh "$N" 'na-sessao supercola-toggle quit >/dev/null 2>&1
   sudo apt-get purge -y -q supercola >/dev/null 2>&1
   rm -rf ~/.local/share/supercola
+  # Uma sessão antiga do editor pode reabrir texto de outra rodada no lugar do arquivo novo.
+  pkill gnome-text-edit; rm -rf ~/.local/state/gnome-text-editor
   sudo rm -f /var/crash/*
   sudo apt-get install -y -q kbd >/dev/null 2>&1
   sudo systemctl mask systemd-networkd-wait-online.service 2>/dev/null
